@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stok Yönetim Uygulaması</title>
+    <!-- Google Fontları -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Material Ikon Seti -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #192E6E;
+            --bg-color: #ECECEC;
+            --card-bg: #FFFFFF;
+            --text-color: #333333;
+            --subtext-color: #666666;
+            --border-color: #e0e0e0;
+            --input-bg: #FFFFFF;
+            --modal-bg: #FFFFFF;
+            --container-bg: #E0E0E0;
+            /* Kirli Beyaz */
+
+            --accent-green: #4CAF50;
+            --accent-red: #F44336;
+            --accent-orange: #FF9800;
+        }
+
+        body.dark-mode {
+            --primary-color: #1a237e;
+            --bg-color: #121212;
+            --card-bg: #1E1E1E;
+            --text-color: #E0E0E0;
+            --subtext-color: #AAAAAA;
+            --border-color: #333333;
+            --input-bg: #2C2C2C;
+            --modal-bg: #1E1E1E;
+            --container-bg: #121212;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* Giriş Ekranı - Bölünmüş Düzen */
+        #login-screen {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+            background-color: var(--bg-color);
+        }
+
+        .login-left {
+            flex: 1;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 3rem;
+            background: var(--container-bg);
+            /* Kirli Beyaz */
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+        }
+
+        .login-right {
+            flex: 2;
+            position: relative;
+            background-color: var(--primary-color);
+            background-image: url('login-bg-port.png');
+            background-size: cover;
+            background-position: center;
+        }
+
+        .login-right::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.2);
+            /* Hafif karartma katmanı */
+        }
+
+        .login-title {
+            color: #1a237e;
+            background-color: transparent;
+            border: 4px solid #90A4AE;
+            font-size: 2rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin: 0 auto 2rem auto;
+            text-align: center;
+            padding: 12px 40px;
+            border-radius: 12px;
+            width: fit-content;
+            display: block;
+            box-shadow: none;
+        }
+
+        body.dark-mode .login-title {
+            color: #90CAF9;
+            /* Açık Mavi */
+            border-color: #546E7A;
+            /* Daha koyu gri-mavi çerçeve */
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 900px) {
+            .login-right {
+                display: none;
+            }
+
+            .login-left {
+                max-width: 100%;
+                width: 100%;
+                flex: 1;
+            }
+        }
+
+        /* Uygulama Genel Düzeni */
+        #app-screen {
+            display: none;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 500;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .header-actions button {
+            background: transparent;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+
+        .header-actions button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        main {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            max-width: 1100px;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Giriş Alanları */
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            transition: border-color 0.3s;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        button.primary-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: filter 0.2s;
+            white-space: nowrap;
+        }
+
+        button.primary-btn:hover {
+            filter: brightness(1.2);
+        }
+
+        body.dark-mode button.primary-btn {
+            background-color: #3949AB;
+        }
+
+        /* Ürün Ekleme Çubuğu */
+        .add-product-container {
+            background: var(--card-bg);
+            padding: 1.2rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .add-product-container input:nth-child(1) {
+            flex: 3;
+        }
+
+        .add-product-container input:nth-child(2) {
+            flex: 1;
+        }
+
+        .add-product-container input:nth-child(3) {
+            flex: 1;
+        }
+
+        .search-bar {
+            margin-bottom: 2rem;
+        }
+
+        /* Liste Görünümü - Artırılmış Boşluklar */
+        .product-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            /* Artırılmış boşluk */
+        }
+
+        .product-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+            /* Hafifçe artırılmış gölge */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 6px solid transparent;
+            min-height: 70px;
+            transition: transform 0.2s;
+        }
+
+        .product-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .product-card.deleted {
+            border: 1px dashed var(--border-color);
+            opacity: 0.7;
+        }
+
+        .product-card.low-stock {
+            border-left-color: var(--accent-red);
+            background: linear-gradient(90deg, rgba(244, 67, 54, 0.08) 0%, var(--card-bg) 40%);
+        }
+
+        .product-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .product-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .product-meta {
+            font-size: 0.95rem;
+            color: var(--subtext-color);
+        }
+
+        .product-meta b {
+            font-weight: 500;
+            color: var(--text-color);
+        }
+
+        .warning-badge {
+            background-color: var(--accent-red);
+            color: white;
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            box-shadow: 0 2px 4px rgba(244, 67, 54, 0.3);
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .icon-btn {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .icon-btn:hover {
+            background-color: rgba(128, 128, 128, 0.1);
+        }
+
+        .icon-btn i {
+            font-size: 1.5rem;
+        }
+
+        .icon-btn.add {
+            color: #2196F3;
+        }
+
+        .icon-btn.history {
+            color: #9E9E9E;
+        }
+
+        .icon-btn.edit {
+            color: #3F51B5;
+        }
+
+        .icon-btn.delete {
+            color: #F44336;
+        }
+
+        .icon-btn.restore {
+            color: #4CAF50;
+        }
+
+        @media (max-width: 768px) {
+            .add-product-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .product-card {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .card-actions {
+                width: 100%;
+                justify-content: flex-end;
+                border-top: 1px solid var(--border-color);
+                padding-top: 10px;
+            }
+        }
+
+        /* Modal Pencereler */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background: var(--modal-bg);
+            color: var(--text-color);
+            padding: 2.5rem;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.6rem;
+            color: var(--text-color);
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.8rem;
+            cursor: pointer;
+            color: var(--subtext-color);
+            padding: 0;
+            line-height: 1;
+        }
+
+        .close-modal:hover {
+            color: var(--accent-red);
+        }
+
+        .trash-header-actions button {
+            background: var(--accent-red);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* Bildirim Mesajı (Toast) */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #323232;
+            color: white;
+            padding: 14px 28px;
+            border-radius: 8px;
+            z-index: 2000;
+            display: none;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        /* Özel Kaydırma Çubuğu Stili */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+            margin: 5px 0;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            border: 2px solid transparent;
+            background-clip: content-box;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(0, 0, 0, 0.3);
+        }
+
+        body.dark-mode ::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        body.dark-mode ::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- GİRİŞ EKRANI -->
+    <div id="login-screen">
+        <div class="login-left">
+            <div class="login-card">
+                <div class="login-title">Stok Yönetim Uygulaması</div>
+                <div class="form-group">
+                    <input type="text" id="username" placeholder="Kullanıcı Adı">
+                </div>
+                <div class="form-group">
+                    <input type="password" id="password" placeholder="Şifre">
+                </div>
+                <button class="primary-btn" onclick="login()" style="width:100%">GİRİŞ YAP</button>
+                <p id="login-error"
+                    style="color: red; display: none; margin-top: 15px; font-size: 0.95rem; text-align: center;">Hatalı
+                    kullanıcı adı veya şifre!</p>
+            </div>
+        </div>
+        <div class="login-right">
+            <!-- Arka plan görseli CSS ile yönetiliyor -->
+        </div>
+    </div>
+
+    <!-- UYGULAMA EKRANI -->
+    <div id="app-screen">
+        <header>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <h1>Ürün Listesi</h1>
+            </div>
+            <div class="header-actions">
+                <button onclick="toggleTheme()" title="Mod Değiştir"><i class="material-icons"
+                        id="theme-icon">dark_mode</i></button>
+                <button onclick="openGlobalHistory()" title="Tüm Hareketler"><i
+                        class="material-icons">history_edu</i></button>
+                <button onclick="toggleView('trash')" title="Çöp Kutusu"><i class="material-icons">delete</i></button>
+                <button onclick="logout()" title="Çıkış"><i class="material-icons">logout</i></button>
+            </div>
+        </header>
+
+        <main id="main-content">
+            <!-- Ürün Ekleme Bölümü -->
+            <div class="add-product-container">
+                <input type="text" id="new-ad" placeholder="Ad">
+                <input type="number" id="new-miktar" placeholder="Miktar" min="0">
+                <input type="number" id="new-fiyat" placeholder="Birim Fiyat" min="0">
+                <button class="primary-btn" onclick="addProduct()">Ekle</button>
+            </div>
+
+            <!-- Arama Alanı -->
+            <div class="search-bar">
+                <input type="text" id="search-input" placeholder="🔍 Ürünlerde ara..." oninput="searchProducts()">
+            </div>
+
+            <!-- Ürün Izgarası (Liste Görünümü) -->
+            <div id="product-list" class="product-grid">
+                <!-- Ürünler buraya eklenecek -->
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL PENCERELER -->
+
+    <!-- Stok Hareketi Modalı -->
+    <div id="stock-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Stok Hareketi</h2>
+                <button class="close-modal" onclick="closeModal('stock-modal')">&times;</button>
+            </div>
+            <h3 id="stock-modal-product-name" style="color: var(--primary-color); margin-top:0; margin-bottom: 20px;">
+            </h3>
+            <div class="form-group">
+                <select id="stock-type">
+                    <option value="giris">Giriş (Artır)</option>
+                    <option value="cikis">Çıkış (Azalt)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <input type="number" id="stock-amount" placeholder="Miktar" min="0">
+            </div>
+            <div class="form-group">
+                <input type="text" id="stock-desc" placeholder="Açıklama (Opsiyonel)">
+            </div>
+            <div style="margin-top: 20px;">
+                <button class="primary-btn" onclick="saveStockMovement()" style="width:100%">KAYDET</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ürün Düzenleme Modalı -->
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Ürün Düzenle</h2>
+                <button class="close-modal" onclick="closeModal('edit-modal')">&times;</button>
+            </div>
+            <input type="hidden" id="edit-id">
+            <div class="form-group">
+                <label style="font-size: 0.9rem; color: var(--subtext-color); margin-bottom: 5px; display:block;">Ürün
+                    Adı</label>
+                <input type="text" id="edit-ad">
+            </div>
+            <div class="form-group">
+                <label style="font-size: 0.9rem; color: var(--subtext-color); margin-bottom: 5px; display:block;">Birim
+                    Fiyat (₺)</label>
+                <input type="number" id="edit-fiyat" min="0">
+            </div>
+            <div class="form-group">
+                <label
+                    style="font-size: 0.9rem; color: var(--subtext-color); margin-bottom: 5px; display:block;">Değişiklik
+                    Açıklaması</label>
+                <input type="text" id="edit-desc">
+            </div>
+            <div style="margin-top: 20px;">
+                <button class="primary-btn" onclick="updateProduct()" style="width:100%">GÜNCELLE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Geçmiş Hareketler Modalı -->
+    <div id="history-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="history-title">Hareket Geçmişi</h2>
+                <button class="close-modal" onclick="closeModal('history-modal')">&times;</button>
+            </div>
+            <div id="history-list" style="max-height: 400px; overflow-y: auto; padding-right: 10px;">
+                <!-- Geçmiş kayıtları -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Çöp Kutusu Modalı -->
+    <div id="trash-modal" class="modal" style="background: rgba(0,0,0,0.85); z-index: 1100;">
+        <div class="modal-content" style="width: 100%; max-width: 900px; height: 90vh;">
+            <div class="modal-header">
+                <h2>Çöp Kutusu</h2>
+                <div class="trash-header-actions">
+                    <button onclick="emptyTrash()">Tümünü Temizle</button>
+                    <button class="close-modal" onclick="closeModal('trash-modal')"
+                        style="margin-left: 20px; font-size: 2rem;">&times;</button>
+                </div>
+            </div>
+            <div id="trash-list" class="product-grid" style="margin-top: 20px;">
+                <!-- Silinen öğeler -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Bildirim Mesajı -->
+    <div id="toast" class="toast">İşlem Başarılı</div>
+
+    <script>
+        const API_URL = "http://localhost:5000";
+        const VALID_USER = "admin";
+        const VALID_PASS = "admin123";
+
+        let currentProductId = null;
+        let isDarkMode = false;
+
+        // Başlangıç işlemleri
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                isDarkMode = true;
+                document.body.classList.add('dark-mode');
+                document.getElementById('theme-icon').innerText = 'light_mode';
+            }
+        });
+
+        // Tema Değiştirme
+        function toggleTheme() {
+            isDarkMode = !isDarkMode;
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+            document.getElementById('theme-icon').innerText = isDarkMode ? 'light_mode' : 'dark_mode';
+        }
+
+        // Giriş Kontrol İşlemleri
+        function login() {
+            const u = document.getElementById('username').value.trim().toLowerCase();
+            const p = document.getElementById('password').value.trim();
+
+            if (u === VALID_USER && p === VALID_PASS) {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('app-screen').style.display = 'flex';
+                loadProducts();
+            } else {
+                document.getElementById('login-error').style.display = 'block';
+            }
+        }
+
+        function logout() {
+            location.reload();
+        }
+
+        // Veri Yükleme İşlemleri
+        async function loadProducts(query = "") {
+            try {
+                const res = await fetch(`${API_URL}/urunler?arama=${query}`);
+                const data = await res.json();
+                renderProducts(data);
+            } catch (error) {
+                console.error("API Error:", error);
+                showToast("Sunucuya bağlanılamadı! Lütfen 'python app.py' çalışıyor mu kontrol edin.");
+            }
+        }
+
+        function renderProducts(products) {
+            const list = document.getElementById('product-list');
+            list.innerHTML = "";
+
+            if (products.length === 0) {
+                list.innerHTML = `<div style="text-align:center; padding:3rem; color:var(--subtext-color); font-size: 1.1rem;">Ürün bulunamadı.</div>`;
+                return;
+            }
+
+            products.forEach(p => {
+                const total = (p.fiyat * p.miktar).toFixed(0);
+                const isLowStock = p.miktar <= 1;
+
+                const card = document.createElement('div');
+                card.className = `product-card ${isLowStock ? 'low-stock' : ''}`;
+                card.innerHTML = `
+                    <div class="product-info">
+                        <div class="product-name">
+                            ${p.ad} 
+                            ${isLowStock ? '<span class="warning-badge"><i class="material-icons" style="font-size:12px;">warning</i> DÜŞÜK STOK</span>' : ''}
+                        </div>
+                        <div class="product-meta">
+                            Miktar: <b>${p.miktar} ${p.birim}</b> &nbsp;&nbsp;&bull;&nbsp;&nbsp; 
+                            Birim Fiyat: <b>${p.fiyat} ₺</b> &nbsp;&nbsp;&bull;&nbsp;&nbsp; 
+                            Toplam: <b>${total} ₺</b>
+                        </div>
+                    </div>
+                    <div class="card-actions">
+                        <button class="icon-btn add" onclick="openStockModal(${p.id}, '${p.ad}')" title="Stok Ekle/Çıkar"><i class="material-icons">playlist_add</i></button>
+                        <button class="icon-btn history" onclick="openHistoryModal(${p.id}, '${p.ad}')" title="Geçmiş"><i class="material-icons">history</i></button>
+                        <button class="icon-btn edit" onclick="openEditModal(${p.id}, '${p.ad}', ${p.fiyat})" title="Düzenle"><i class="material-icons">edit</i></button>
+                        <button class="icon-btn delete" onclick="deleteProduct(${p.id}, '${p.ad}')" title="Sil"><i class="material-icons">delete</i></button>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        // Yeni Ürün Ekleme
+        async function addProduct() {
+            const ad = document.getElementById('new-ad').value;
+            const miktar = document.getElementById('new-miktar').value;
+            const fiyat = document.getElementById('new-fiyat').value;
+
+            if (!ad || !fiyat) { showToast("Gerekli alanları doldurun!"); return; }
+            if (parseInt(miktar) < 0 || parseFloat(fiyat) < 0) { showToast("Miktar ve Fiyat negatif olamaz!"); return; }
+
+            const res = await fetch(`${API_URL}/urunler`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ad: ad,
+                    miktar: parseInt(miktar) || 0,
+                    fiyat: parseFloat(fiyat)
+                })
+            });
+
+            if (res.ok) {
+                document.getElementById('new-ad').value = "";
+                document.getElementById('new-miktar').value = "";
+                document.getElementById('new-fiyat').value = "";
+                showToast("Ürün Eklendi");
+                loadProducts();
+            } else {
+                const err = await res.json();
+                showToast(err.hata || "Hata oluştu");
+            }
+        }
+
+        // Stok İşlemleri
+        function openStockModal(id, name) {
+            currentProductId = id;
+            document.getElementById('stock-modal-product-name').innerText = name;
+            document.getElementById('stock-modal').style.display = 'flex';
+        }
+
+        async function saveStockMovement() {
+            const type = document.getElementById('stock-type').value;
+            const amount = document.getElementById('stock-amount').value;
+            const desc = document.getElementById('stock-desc').value;
+
+            if (!amount) return;
+            if (parseInt(amount) < 0) { showToast("Miktar negatif olamaz!"); return; }
+
+            const res = await fetch(`${API_URL}/hareketler`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    urun_id: currentProductId,
+                    hareket_tipi: type,
+                    miktar: parseInt(amount),
+                    aciklama: desc
+                })
+            });
+
+            if (res.ok) {
+                closeModal('stock-modal');
+                showToast("Stok Güncellendi");
+                loadProducts();
+                document.getElementById('stock-amount').value = "";
+                document.getElementById('stock-desc').value = "";
+            } else {
+                showToast("Hata oluştu");
+            }
+        }
+
+        // Silme İşlemleri
+        async function deleteProduct(id, name) {
+            if (!confirm(`'${name}' çöp kutusuna taşınsın mı?`)) return;
+
+            const res = await fetch(`${API_URL}/urunler/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                showToast("Ürün Silindi");
+                loadProducts();
+            }
+        }
+
+        // Düzenleme İşlemleri
+        function openEditModal(id, name, price) {
+            currentProductId = id;
+            document.getElementById('edit-id').value = id;
+            document.getElementById('edit-ad').value = name;
+            document.getElementById('edit-fiyat').value = price;
+            document.getElementById('edit-modal').style.display = 'flex';
+        }
+
+        async function updateProduct() {
+            const id = document.getElementById('edit-id').value;
+            const name = document.getElementById('edit-ad').value;
+            const price = document.getElementById('edit-fiyat').value;
+            const desc = document.getElementById('edit-desc').value;
+
+            if (parseFloat(price) < 0) { showToast("Fiyat negatif olamaz!"); return; }
+
+            const res = await fetch(`${API_URL}/urunler/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ad: name,
+                    fiyat: parseFloat(price),
+                    aciklama: desc
+                })
+            });
+
+            if (res.ok) {
+                closeModal('edit-modal');
+                showToast("Güncellendi");
+                loadProducts();
+                document.getElementById('edit-desc').value = "";
+            }
+        }
+
+        // Geçmiş İşlemleri
+        async function openHistoryModal(id, name) {
+            document.getElementById('history-title').innerText = `${name} - Hareket Geçmişi`;
+            await fetchAndRenderHistory(`${API_URL}/hareketler?urun_id=${id}`);
+            document.getElementById('history-modal').style.display = 'flex';
+        }
+
+        async function openGlobalHistory() {
+            document.getElementById('history-title').innerText = `Tüm İşlem Geçmişi`;
+            await fetchAndRenderHistory(`${API_URL}/hareketler`);
+            document.getElementById('history-modal').style.display = 'flex';
+        }
+
+        async function fetchAndRenderHistory(url) {
+            const res = await fetch(url);
+            const data = await res.json();
+            const list = document.getElementById('history-list');
+            list.innerHTML = "";
+
+            if (data.length === 0) list.innerHTML = "<p style='text-align:center; color:gray'>Kayıt bulunamadı.</p>";
+
+            data.forEach(h => {
+                let color = 'gray';
+                let icon = 'edit';
+                let label = 'Düzenleme';
+
+                if (h.hareket_tipi === 'giris') { color = 'green'; icon = 'add_circle'; label = 'Giriş'; }
+                else if (h.hareket_tipi === 'cikis') { color = 'red'; icon = 'remove_circle'; label = 'Çıkış'; }
+
+                const item = document.createElement('div');
+                item.style.padding = "16px 0";
+                item.style.borderBottom = "1px solid var(--border-color)";
+                item.style.display = "flex";
+                item.style.alignItems = "center";
+                item.style.gap = "15px";
+                item.innerHTML = `
+                    <i class="material-icons" style="color:${color}; font-size: 24px;">${icon}</i>
+                    <div style="flex:1">
+                        <div style="font-weight:600; color:var(--text-color); font-size:1rem;">
+                            ${h.urun_adi ? h.urun_adi + ' - ' : ''} ${label}: <span style="color:${color}">${h.miktar}</span>
+                        </div>
+                        <div style="font-size:0.9rem; color:var(--subtext-color); margin-top:4px;">
+                            ${h.aciklama || 'Açıklama yok'}
+                        </div>
+                    </div>
+                    <div style="font-size:0.85rem; color:var(--subtext-color); white-space:nowrap; font-weight:500;">
+                        ${h.tarih}
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        // Çöp Kutusu Mantığı
+        async function toggleView(view) {
+            if (view === 'trash') {
+                const res = await fetch(`${API_URL}/copkutusu`);
+                const data = await res.json();
+                renderTrash(data);
+                document.getElementById('trash-modal').style.display = 'flex';
+            }
+        }
+
+        function renderTrash(products) {
+            const list = document.getElementById('trash-list');
+            list.innerHTML = "";
+            if (products.length === 0) {
+                list.innerHTML = "<p style='text-align:center; width:100%; color:white; font-size:1.2rem;'>Çöp kutusu boş.</p>";
+                return;
+            }
+
+            products.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'product-card deleted';
+                card.innerHTML = `
+                    <div class="product-info">
+                        <div class="product-name" style="text-decoration: line-through;">${p.ad}</div>
+                        <div class="product-meta">Silinmiş Ürün</div>
+                    </div>
+                    <div class="card-actions">
+                        <button class="icon-btn restore" onclick="restoreProduct(${p.id})" title="Geri Al"><i class="material-icons">restore_from_trash</i></button>
+                        <button class="icon-btn delete" onclick="permanentDelete(${p.id})" title="Kalıcı Sil"><i class="material-icons">delete_forever</i></button>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        async function restoreProduct(id) {
+            const res = await fetch(`${API_URL}/urunler/${id}/geri-al`, { method: 'PATCH' });
+            if (res.ok) {
+                showToast("Ürün Geri Alındı");
+                toggleView('trash');
+                loadProducts();
+            }
+        }
+
+        async function permanentDelete(id) {
+            if (confirm("Bu işlem geri alınamaz! Kalıcı olarak silinsin mi?")) {
+                const res = await fetch(`${API_URL}/copkutusu/${id}/kalici-sil`, { method: 'DELETE' });
+                if (res.ok) toggleView('trash');
+            }
+        }
+
+        async function emptyTrash() {
+            if (confirm("Tüm çöp kutusunu boşaltmak istediğinize emin misiniz?")) {
+                await fetch(`${API_URL}/copkutusu/sil`, { method: 'DELETE' });
+                toggleView('trash');
+            }
+        }
+
+        // Yardımcı Fonksiyonlar
+        const closeModal = (id) => document.getElementById(id).style.display = 'none';
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 3000);
+        }
+
+        function searchProducts() {
+            const q = document.getElementById('search-input').value;
+            loadProducts(q);
+        }
+
+        document.getElementById('password').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') login();
+        });
+
+    </script>
+</body>
+
+</html>
