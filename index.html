@@ -668,15 +668,49 @@
     <div id="toast" class="toast">İşlem Başarılı</div>
 
     <script>
-        const API_URL = "http://localhost:5000";
-        const VALID_USER = "admin";
-        const VALID_PASS = "admin123";
+        // Arayüz Flask tarafından sunulduğu için API aynı adreste
+        const API_URL = "";
+
+        // Veritabanından gelen metinler HTML'e basılmadan önce kaçışlanır;
+        // aksi halde ürün adına yazılan bir <script> sayfayı açan herkeste çalışır.
+        function esc(value) {
+            const div = document.createElement('div');
+            div.textContent = value === null || value === undefined ? '' : String(value);
+            return div.innerHTML;
+        }
+
+        // API çağrıları: oturum düşmüşse giriş ekranına döner
+        async function api(url, options = {}) {
+            const res = await fetch(url, { credentials: 'same-origin', ...options });
+            if (res.status === 401) {
+                showLoginScreen();
+                throw new Error('Oturum gerekli');
+            }
+            return res;
+        }
+
+        function showLoginScreen() {
+            document.getElementById('app-screen').style.display = 'none';
+            document.getElementById('login-screen').style.display = 'flex';
+        }
+
+        function showAppScreen() {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('app-screen').style.display = 'flex';
+            loadProducts();
+        }
 
         let currentProductId = null;
         let isDarkMode = false;
 
         // Başlangıç işlemleri
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Açık bir oturum varsa doğrudan uygulamaya geç
+            try {
+                const res = await fetch(`${API_URL}/oturum`, { credentials: 'same-origin' });
+                if ((await res.json()).giris_yapildi) showAppScreen();
+            } catch (e) { /* sunucuya ulaşılamazsa giriş ekranı kalır */ }
+
             const savedTheme = localStorage.getItem('theme');
             if (savedTheme === 'dark') {
                 isDarkMode = true;
@@ -693,28 +727,48 @@
             document.getElementById('theme-icon').innerText = isDarkMode ? 'light_mode' : 'dark_mode';
         }
 
-        // Giriş Kontrol İşlemleri
-        function login() {
-            const u = document.getElementById('username').value.trim().toLowerCase();
-            const p = document.getElementById('password').value.trim();
+        // Giriş Kontrol İşlemleri: doğrulama sunucuda yapılır
+        async function login() {
+            const errorEl = document.getElementById('login-error');
+            errorEl.style.display = 'none';
 
-            if (u === VALID_USER && p === VALID_PASS) {
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('app-screen').style.display = 'flex';
-                loadProducts();
-            } else {
-                document.getElementById('login-error').style.display = 'block';
+            try {
+                const res = await fetch(`${API_URL}/giris`, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        kullanici_adi: document.getElementById('username').value.trim(),
+                        sifre: document.getElementById('password').value
+                    })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    document.getElementById('password').value = '';
+                    showAppScreen();
+                } else {
+                    errorEl.textContent = data.hata || 'Hatalı kullanıcı adı veya şifre!';
+                    errorEl.style.display = 'block';
+                }
+            } catch (error) {
+                errorEl.textContent = 'Sunucuya bağlanılamadı.';
+                errorEl.style.display = 'block';
             }
         }
 
-        function logout() {
-            location.reload();
+        async function logout() {
+            try {
+                await fetch(`${API_URL}/cikis`, { method: 'POST', credentials: 'same-origin' });
+            } finally {
+                location.reload();
+            }
         }
 
         // Veri Yükleme İşlemleri
         async function loadProducts(query = "") {
             try {
-                const res = await fetch(`${API_URL}/urunler?arama=${query}`);
+                const res = await api(`${API_URL}/urunler?arama=${encodeURIComponent(query)}`);
                 const data = await res.json();
                 renderProducts(data);
             } catch (error) {
@@ -741,22 +795,29 @@
                 card.innerHTML = `
                     <div class="product-info">
                         <div class="product-name">
-                            ${p.ad} 
+                            ${esc(p.ad)} 
                             ${isLowStock ? '<span class="warning-badge"><i class="material-icons" style="font-size:12px;">warning</i> DÜŞÜK STOK</span>' : ''}
                         </div>
                         <div class="product-meta">
-                            Miktar: <b>${p.miktar} ${p.birim}</b> &nbsp;&nbsp;&bull;&nbsp;&nbsp; 
-                            Birim Fiyat: <b>${p.fiyat} ₺</b> &nbsp;&nbsp;&bull;&nbsp;&nbsp; 
-                            Toplam: <b>${total} ₺</b>
+                            Miktar: <b>${esc(p.miktar)} ${esc(p.birim)}</b> &nbsp;&nbsp;&bull;&nbsp;&nbsp; 
+                            Birim Fiyat: <b>${esc(p.fiyat)} ₺</b> &nbsp;&nbsp;&bull;&nbsp;&nbsp; 
+                            Toplam: <b>${esc(total)} ₺</b>
                         </div>
                     </div>
                     <div class="card-actions">
-                        <button class="icon-btn add" onclick="openStockModal(${p.id}, '${p.ad}')" title="Stok Ekle/Çıkar"><i class="material-icons">playlist_add</i></button>
-                        <button class="icon-btn history" onclick="openHistoryModal(${p.id}, '${p.ad}')" title="Geçmiş"><i class="material-icons">history</i></button>
-                        <button class="icon-btn edit" onclick="openEditModal(${p.id}, '${p.ad}', ${p.fiyat})" title="Düzenle"><i class="material-icons">edit</i></button>
-                        <button class="icon-btn delete" onclick="deleteProduct(${p.id}, '${p.ad}')" title="Sil"><i class="material-icons">delete</i></button>
+                        <button class="icon-btn add" title="Stok Ekle/Çıkar"><i class="material-icons">playlist_add</i></button>
+                        <button class="icon-btn history" title="Geçmiş"><i class="material-icons">history</i></button>
+                        <button class="icon-btn edit" title="Düzenle"><i class="material-icons">edit</i></button>
+                        <button class="icon-btn delete" title="Sil"><i class="material-icons">delete</i></button>
                     </div>
                 `;
+                // Ürün adı onclick içine metin olarak yazılmaz; HTML kaçışı
+                // JavaScript metni içinde koruma sağlamaz. Değerler doğrudan
+                // olay dinleyicisine verilir.
+                card.querySelector('.add').addEventListener('click', () => openStockModal(p.id, p.ad));
+                card.querySelector('.history').addEventListener('click', () => openHistoryModal(p.id, p.ad));
+                card.querySelector('.edit').addEventListener('click', () => openEditModal(p.id, p.ad, p.fiyat));
+                card.querySelector('.delete').addEventListener('click', () => deleteProduct(p.id, p.ad));
                 list.appendChild(card);
             });
         }
@@ -770,7 +831,7 @@
             if (!ad || !fiyat) { showToast("Gerekli alanları doldurun!"); return; }
             if (parseInt(miktar) < 0 || parseFloat(fiyat) < 0) { showToast("Miktar ve Fiyat negatif olamaz!"); return; }
 
-            const res = await fetch(`${API_URL}/urunler`, {
+            const res = await api(`${API_URL}/urunler`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -807,7 +868,7 @@
             if (!amount) return;
             if (parseInt(amount) < 0) { showToast("Miktar negatif olamaz!"); return; }
 
-            const res = await fetch(`${API_URL}/hareketler`, {
+            const res = await api(`${API_URL}/hareketler`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -833,7 +894,7 @@
         async function deleteProduct(id, name) {
             if (!confirm(`'${name}' çöp kutusuna taşınsın mı?`)) return;
 
-            const res = await fetch(`${API_URL}/urunler/${id}`, { method: 'DELETE' });
+            const res = await api(`${API_URL}/urunler/${id}`, { method: 'DELETE' });
             if (res.ok) {
                 showToast("Ürün Silindi");
                 loadProducts();
@@ -857,7 +918,7 @@
 
             if (parseFloat(price) < 0) { showToast("Fiyat negatif olamaz!"); return; }
 
-            const res = await fetch(`${API_URL}/urunler/${id}`, {
+            const res = await api(`${API_URL}/urunler/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -889,7 +950,7 @@
         }
 
         async function fetchAndRenderHistory(url) {
-            const res = await fetch(url);
+            const res = await api(url);
             const data = await res.json();
             const list = document.getElementById('history-list');
             list.innerHTML = "";
@@ -914,14 +975,14 @@
                     <i class="material-icons" style="color:${color}; font-size: 24px;">${icon}</i>
                     <div style="flex:1">
                         <div style="font-weight:600; color:var(--text-color); font-size:1rem;">
-                            ${h.urun_adi ? h.urun_adi + ' - ' : ''} ${label}: <span style="color:${color}">${h.miktar}</span>
+                            ${h.urun_adi ? esc(h.urun_adi) + ' - ' : ''} ${label}: <span style="color:${color}">${esc(h.miktar)}</span>
                         </div>
                         <div style="font-size:0.9rem; color:var(--subtext-color); margin-top:4px;">
-                            ${h.aciklama || 'Açıklama yok'}
+                            ${h.aciklama ? esc(h.aciklama) : 'Açıklama yok'}
                         </div>
                     </div>
                     <div style="font-size:0.85rem; color:var(--subtext-color); white-space:nowrap; font-weight:500;">
-                        ${h.tarih}
+                        ${esc(h.tarih)}
                     </div>
                 `;
                 list.appendChild(item);
@@ -931,7 +992,7 @@
         // Çöp Kutusu Mantığı
         async function toggleView(view) {
             if (view === 'trash') {
-                const res = await fetch(`${API_URL}/copkutusu`);
+                const res = await api(`${API_URL}/copkutusu`);
                 const data = await res.json();
                 renderTrash(data);
                 document.getElementById('trash-modal').style.display = 'flex';
@@ -951,7 +1012,7 @@
                 card.className = 'product-card deleted';
                 card.innerHTML = `
                     <div class="product-info">
-                        <div class="product-name" style="text-decoration: line-through;">${p.ad}</div>
+                        <div class="product-name" style="text-decoration: line-through;">${esc(p.ad)}</div>
                         <div class="product-meta">Silinmiş Ürün</div>
                     </div>
                     <div class="card-actions">
@@ -964,7 +1025,7 @@
         }
 
         async function restoreProduct(id) {
-            const res = await fetch(`${API_URL}/urunler/${id}/geri-al`, { method: 'PATCH' });
+            const res = await api(`${API_URL}/urunler/${id}/geri-al`, { method: 'PATCH' });
             if (res.ok) {
                 showToast("Ürün Geri Alındı");
                 toggleView('trash');
@@ -974,14 +1035,14 @@
 
         async function permanentDelete(id) {
             if (confirm("Bu işlem geri alınamaz! Kalıcı olarak silinsin mi?")) {
-                const res = await fetch(`${API_URL}/copkutusu/${id}/kalici-sil`, { method: 'DELETE' });
+                const res = await api(`${API_URL}/copkutusu/${id}/kalici-sil`, { method: 'DELETE' });
                 if (res.ok) toggleView('trash');
             }
         }
 
         async function emptyTrash() {
             if (confirm("Tüm çöp kutusunu boşaltmak istediğinize emin misiniz?")) {
-                await fetch(`${API_URL}/copkutusu/sil`, { method: 'DELETE' });
+                await api(`${API_URL}/copkutusu/sil`, { method: 'DELETE' });
                 toggleView('trash');
             }
         }

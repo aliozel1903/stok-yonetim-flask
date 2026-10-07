@@ -25,24 +25,38 @@ Projeyi yerel makinenizde çalıştırmak için aşağıdaki adımları izleyin:
 
 1.  **Projeyi klonlayın:**
     ```bash
-    git clone [https://github.com/KULLANICI_ADIN/REPO_ADIN.git](https://github.com/KULLANICI_ADIN/REPO_ADIN.git)
-    cd REPO_ADIN
+    git clone https://github.com/aliozel1903/stok-yonetim-flask.git
+    cd stok-yonetim-flask
     ```
 
-2.  **Gerekli kütüphaneleri yükleyin:**
+2.  **Gerekli kütüphaneyi yükleyin:**
     ```bash
-    pip install flask flask-cors
+    pip install flask
     ```
 
-3.  **Uygulamayı başlatın:**
+3.  **Bir kullanıcı oluşturun** (şifre en az 12 karakter, ekranda gösterilmeden sorulur):
+    ```bash
+    flask --app app kullanici-olustur admin
+    ```
+
+4.  **Uygulamayı başlatın:**
     ```bash
     python app.py
     ```
 
-4.  **Tarayıcıda açın:**
-    Tarayıcınızda `http://localhost:5000` adresine gidin.
-    * **Kullanıcı Adı:** admin
-    * **Şifre:** admin123
+5.  **Tarayıcıda açın:** `http://127.0.0.1:5000`
+
+    macOS'ta `localhost:5000` adresi AirPlay alıcısına gidebilir; bu yüzden `127.0.0.1` kullanın.
+
+## 🔒 Güvenlik
+
+* **Sunucu tarafında kimlik doğrulama:** Giriş bilgileri sunucuda kontrol edilir; tüm API uçları oturum açılmadan 401 döner.
+* **Şifreler hash'lenir:** Veritabanında düz metin şifre tutulmaz (Werkzeug `scrypt`). Kodda varsayılan şifre yoktur.
+* **Deneme yanılma koruması:** IP başına dakikada 5 hatalı giriş denemesinden sonra giriş geçici olarak kilitlenir.
+* **Güvenli oturum çerezi:** `HttpOnly` ve `SameSite=Lax`; oturum 8 saat sonra sona erer. `STOK_SECRET_KEY` ortam değişkeni tanımlanmazsa her başlatmada rastgele anahtar üretilir.
+* **XSS koruması:** Veritabanından gelen metinler ekrana basılmadan önce kaçışlanır.
+* **Yalnızca gerekli dosyalar sunulur:** Uygulama kodu ve veritabanı dosyası tarayıcıdan indirilemez.
+* **Güvenli varsayılanlar:** Sunucu yalnızca bu bilgisayardan erişilebilir (`127.0.0.1`); hata ayıklama modu kapalıdır ve yalnızca `STOK_DEBUG=1` ile açılır.
 
 ## 📷 Ekran Görüntüleri
 
