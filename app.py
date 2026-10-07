@@ -4,7 +4,9 @@ from functools import wraps
 from datetime import datetime, timedelta
 from threading import Lock
 import click
+import math
 import os
+import re
 import secrets
 import sqlite3
 import time
@@ -186,6 +188,54 @@ def public_file(dosya):
 
 
 # ---------------------------------------------------------------------------
+# Girdi doğrulama
+# ---------------------------------------------------------------------------
+# Arayüzdeki kontroller atlanabilir (API'ye doğrudan istek atılabilir); bu
+# yüzden sayıların ve seçeneklerin geçerliliği sunucuda da denetlenir.
+
+HAREKET_TIPLERI = {"giris", "cikis"}
+
+class HataliGiris(Exception):
+    pass
+
+@app.errorhandler(HataliGiris)
+def hatali_giris(hata):
+    return jsonify({"hata": str(hata)}), 400
+
+def tam_sayi(deger, alan, en_az):
+    # bool, Python'da int'in alt sınıfıdır; True/False sayı kabul edilmez
+    if isinstance(deger, bool):
+        raise HataliGiris(f"{alan} tam sayı olmalıdır.")
+    if isinstance(deger, int):
+        sayi = deger
+    elif isinstance(deger, str) and re.fullmatch(r"-?\d+", deger.strip()):
+        sayi = int(deger)
+    else:
+        raise HataliGiris(f"{alan} tam sayı olmalıdır.")
+    if sayi < en_az:
+        raise HataliGiris(f"{alan} en az {en_az} olmalıdır.")
+    return sayi
+
+def sayi(deger, alan, en_az):
+    if isinstance(deger, bool):
+        raise HataliGiris(f"{alan} sayı olmalıdır.")
+    try:
+        sonuc = float(deger)
+    except (TypeError, ValueError):
+        raise HataliGiris(f"{alan} sayı olmalıdır.")
+    if not math.isfinite(sonuc):
+        raise HataliGiris(f"{alan} sayı olmalıdır.")
+    if sonuc < en_az:
+        raise HataliGiris(f"{alan} negatif olamaz.")
+    return sonuc
+
+def metin(deger, alan):
+    if not isinstance(deger, str) or not deger.strip():
+        raise HataliGiris(f"{alan} zorunludur.")
+    return deger.strip()
+
+
+# ---------------------------------------------------------------------------
 # API
 # ---------------------------------------------------------------------------
 
@@ -215,14 +265,12 @@ def cop_kutusu():
 @login_required
 def urun_ekle():
     data = request.json or {}
-    ad = data.get("ad")
-    miktar = data.get("miktar", 0)
-    birim = data.get("birim", "adet")
-    fiyat = data.get("fiyat", 0)
-    if not ad:
-        return jsonify({"hata": "ad alanı zorunludur"}), 400
-    if fiyat is None or fiyat == "":
+    ad = metin(data.get("ad"), "Ürün adı")
+    miktar = tam_sayi(data.get("miktar", 0), "Miktar", 0)
+    birim = metin(data.get("birim", "adet"), "Birim")
+    if data.get("fiyat") in (None, ""):
         return jsonify({"hata": "fiyat alanı zorunludur"}), 400
+    fiyat = sayi(data.get("fiyat"), "Fiyat", 0)
 
     db = get_db()
     # Hatalı giriş kontrolü: Aynı isimde aktif ürün varsa ekleme
@@ -248,9 +296,11 @@ def urun_ekle():
 @login_required
 def urun_guncelle(uid):
     data = request.json or {}
-    yeni_ad = data.get("ad")
-    yeni_fiyat = data.get("fiyat")
-    aciklama_ek = data.get("aciklama", "")
+    yeni_ad = metin(data["ad"], "Ürün adı") if data.get("ad") is not None else None
+    yeni_fiyat = sayi(data["fiyat"], "Fiyat", 0) if data.get("fiyat") is not None else None
+    aciklama_ek = data.get("aciklama") or ""
+    if not isinstance(aciklama_ek, str):
+        raise HataliGiris("Açıklama metin olmalıdır.")
 
     db = get_db()
     eski = db.execute("SELECT * FROM urunler WHERE id=? AND silindi = 0", (uid,)).fetchone()
@@ -318,6 +368,31 @@ def urun_geri_al(uid):
     db.commit()
     return jsonify({"durum": "ürün geri getirildi"}), 200
 
+# Kalıcı silme yalnızca çöp kutusundaki ürünler için mümkündür; aktif bir ürün
+# önce çöp kutusuna taşınmadan veritabanından silinemez.
+@app.route("/copkutusu/<int:uid>/kalici-sil", methods=["DELETE"])
+@login_required
+def kalici_sil(uid):
+    db = get_db()
+    row = db.execute("SELECT id FROM urunler WHERE id=? AND silindi = 1", (uid,)).fetchone()
+    if row is None:
+        return jsonify({"hata": "çöp kutusunda böyle bir ürün yok"}), 404
+
+    # Ürünün stok hareketleri de silinir (yabancı anahtar ürüne bağlı)
+    db.execute("DELETE FROM stok_hareketleri WHERE urun_id = ?", (uid,))
+    db.execute("DELETE FROM urunler WHERE id = ?", (uid,))
+    db.commit()
+    return jsonify({"durum": "kalıcı olarak silindi"}), 200
+
+@app.route("/copkutusu/sil", methods=["DELETE"])
+@login_required
+def copu_bosalt():
+    db = get_db()
+    db.execute("DELETE FROM stok_hareketleri WHERE urun_id IN (SELECT id FROM urunler WHERE silindi = 1)")
+    silinen = db.execute("DELETE FROM urunler WHERE silindi = 1").rowcount
+    db.commit()
+    return jsonify({"durum": "çöp kutusu boşaltıldı", "silinen": silinen}), 200
+
 @app.route("/hareketler", methods=["GET"])
 @login_required
 def hareket_liste():
@@ -344,10 +419,16 @@ def hareket_liste():
 @login_required
 def hareket_ekle():
     data = request.json or {}
-    urun_id = data.get("urun_id")
+    urun_id = tam_sayi(data.get("urun_id"), "Ürün", 1)
     hareket_tipi = data.get("hareket_tipi")
-    miktar = data.get("miktar", 0)
-    aciklama = data.get("aciklama", "")
+    if hareket_tipi not in HAREKET_TIPLERI:
+        raise HataliGiris("Hareket tipi 'giris' veya 'cikis' olmalıdır.")
+    # Miktar her zaman pozitiftir; yönü hareket tipi belirler. Aksi halde
+    # negatif miktarlı bir "çıkış" stoğu artırırdı.
+    miktar = tam_sayi(data.get("miktar"), "Miktar", 1)
+    aciklama = data.get("aciklama") or ""
+    if not isinstance(aciklama, str):
+        raise HataliGiris("Açıklama metin olmalıdır.")
 
     db = get_db()
     urun = db.execute("SELECT * FROM urunler WHERE id=? AND silindi=0", (urun_id,)).fetchone()
